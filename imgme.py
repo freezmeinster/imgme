@@ -5,6 +5,7 @@ import urllib2
 import os
 import argparse
 import hashlib
+import shutil
 from urllib import urlretrieve
 
 import settings
@@ -28,8 +29,10 @@ def update_image_list():
     html_index = os.path.join(settings.MIRROR_DEST_DIR, 'index.html')
     image_list = list()
     if os.path.isdir(settings.MIRROR_DEST_DIR) :
-        for uuid in os.listdir(settings.MIRROR_DEST_DIR) :
-            image = read_manifest(uuid)
+        image_raw = os.listdir(settings.MIRROR_DEST_DIR)
+        image_raw.remove("index.html")
+        for uid in image_raw :
+            image = read_manifest(uid)
             image_list.append(image)
     with open(html_index, 'wb') as html_file :
         html_file.write(json.dumps(image_list))
@@ -79,6 +82,7 @@ def update_by_uuid(uuid):
         url = settings.BASE_IMAGES_URL + "/" + uuid + "/file"
         urlretrieve(url,file_path)
         print "Download Done"
+    update_image_list()
             
 
 def verify_uuid(uuid):
@@ -122,6 +126,13 @@ def list_owned():
     else :
         print "Image target directory %s not exist, please make the directory" % settings.MIRROR_DEST_DIR 
 
+def delete_image(uuid):
+    image_dir = os.path.join(settings.MIRROR_DEST_DIR, uuid)
+    print "Deleting image %s" % uuid
+    if os.path.isdir(image_dir):
+        shutil.rmtree(image_dir)
+    update_image_list()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
@@ -129,6 +140,7 @@ if __name__ == '__main__':
     parser.add_argument("-ui", "--update-image-list", action="store_true", help="Update html index list")
     parser.add_argument("-la", "--list-available", action="store_true", help="List available image in index manifest")
     parser.add_argument("-lo", "--list-owned", action="store_true", help="List owned images")
+    parser.add_argument("-d", "--delete", type=str, help="Delete image")
     parser.add_argument("uuid",  nargs='?', type=str, help="UUID of image")
     args = parser.parse_args()
     if args.update_image_list :
@@ -138,6 +150,8 @@ if __name__ == '__main__':
         print "Updating index manifest"
         update_index()
         print "Done updating manifest"
+    elif args.delete :
+        delete_image(args.delete)
     elif args.list_available :
         list_available()
     elif args.list_owned :
