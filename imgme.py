@@ -106,7 +106,9 @@ def list_owned():
     labels = ['UUID', 'Name', 'Type', 'OS', 'Version', 'Pub Date']
     rows = list()
     if os.path.isdir(settings.MIRROR_DEST_DIR) :
-        for uuid in os.listdir(settings.MIRROR_DEST_DIR) :
+        list_uuid = os.listdir(settings.MIRROR_DEST_DIR)
+        list_uuid.remove("index.html") 
+        for uuid in list_uuid:
             image = read_manifest(uuid)
             uuid = image.get("uuid")
             name = image.get("name")
