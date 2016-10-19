@@ -24,14 +24,20 @@ def update_index():
     index_raw = urllib2.urlopen(settings.BASE_IMAGES_URL).read()
     with open(os.path.join(BASE_DIR,"index.json"), "wb") as index_file :
         index_file.write(index_raw)
+    with open(os.path.join(settings.MIRROR_DEST_DIR, "../ping"), 'wb') as pingfile :
+        pingfile.write(settings.PING_STRING)
+
+def get_available_uuid():
+    image_raw = os.listdir(settings.MIRROR_DEST_DIR)
+    if "index.html" in image_raw :
+        image_raw.remove("index.html")
+    return image_raw
 
 def update_image_list():
     html_index = os.path.join(settings.MIRROR_DEST_DIR, 'index.html')
     image_list = list()
     if os.path.isdir(settings.MIRROR_DEST_DIR) :
-        image_raw = os.listdir(settings.MIRROR_DEST_DIR)
-        image_raw.remove("index.html")
-        for uid in image_raw :
+        for uid in get_available_uuid() :
             image = read_manifest(uid)
             image_list.append(image)
     with open(html_index, 'wb') as html_file :
@@ -54,7 +60,8 @@ def read_uuid(uuid):
 def read_manifest(uuid):
     dest_dir = os.path.join(settings.MIRROR_DEST_DIR, uuid)
     manifest_path = os.path.join(dest_dir, "index.html")
-    manifest = open(manifest_path ,'rb').read()
+    with open(manifest_path, 'rb') as manifest_file :
+        manifest = manifest_file.read()
     index = json.loads(manifest)
     return index
     
@@ -65,8 +72,8 @@ def update_by_uuid(uuid):
     if not os.path.isdir(dest_dir) :
         print "Creating target directory %s" % dest_dir
         os.mkdir(dest_dir)
-    uuid_manifest = open(os.path.join(dest_dir, "index.html"), 'wb')
-    uuid_manifest.write(json.dumps(manifest))
+    with open(os.path.join(dest_dir, "index.html"), 'wb') as uuid_manifest :
+        uuid_manifest.write(json.dumps(manifest))
     if os.path.isfile(file_path) :
         print "Image file %s apear, checksuming file" % file_path
         checksum = checksum_sha1(file_path)
@@ -110,9 +117,7 @@ def list_owned():
     labels = ['UUID', 'Name', 'Type', 'OS', 'Version', 'Pub Date']
     rows = list()
     if os.path.isdir(settings.MIRROR_DEST_DIR) :
-        list_uuid = os.listdir(settings.MIRROR_DEST_DIR)
-        list_uuid.remove("index.html") 
-        for uuid in list_uuid:
+        for uuid in get_available_uuid():
             image = read_manifest(uuid)
             uuid = image.get("uuid")
             name = image.get("name")
